@@ -19,7 +19,16 @@ sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-11 11
   sudo apt-get install -y liblog4cxx-dev
   ```
 -  Eigen
+  
+  ```shell
+  sudo apt-get install -y libboost-all-dev
+  ```
+
 -  Boost
+  
+  ```shell
+  sudo apt-get install -y libeigen3-dev
+  ```
 
 ## Code Structure
 - benchmark -- application code to use the generated shared library
