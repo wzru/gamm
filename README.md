@@ -11,10 +11,15 @@ sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-11 11
 sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-11 11
 ```
 
-## Requires Log4cxx
-```shell
-sudo apt-get install -y liblog4cxx-dev
-```
+## Dependencies
+
+- Log4Cxx
+
+  ```shell
+  sudo apt-get install -y liblog4cxx-dev
+  ```
+-  Eigen
+-  Boost
 
 ## Code Structure
 - benchmark -- application code to use the generated shared library

@@ -1,34 +1,39 @@
-// Copyright (C) 2021 by the IntelliStream team (https://github.com/intellistream)
+// Copyright (C) 2021 by the IntelliStream team
+// (https://github.com/intellistream)
 
+#include <Eigen/SVD>
+#include <Utils/Logger.hpp>
 #include <Utils/UtilityFunctions.hpp>
+#include <cmath>
+#include <limits>
 
-static unsigned long mt[N]; /* the array for the state vector  */
-static int mti; /* mti==N+1 means mt[N] is not initialized */
+using namespace GAMM;
 
-long INTELLI::UtilityFunctions::genrand_int31() {
-  return long(genrand_int32() >> 1);
-}
-unsigned long INTELLI::UtilityFunctions::genrand_int32() {
+static unsigned long mt[UTIL_N]; /* the array for the state vector  */
+static int mti;                  /* mti==N+1 means mt[N] is not initialized */
+
+long UtilityFunctions::genrand_int31() { return long(genrand_int32() >> 1); }
+unsigned long UtilityFunctions::genrand_int32() {
   unsigned long y;
-  static unsigned long mag01[2] = {0x0UL, MATRIX_A};
+  static unsigned long mag01[2] = {0x0UL, UTIL_MATRIX_A};
   /* mag01[x] = x * MATRIX_A  for x=0,1 */
 
-  if (mti >= N) { /* generate N words at one time */
+  if (mti >= UTIL_N) { /* generate N words at one time */
     int kk;
 
-    if (mti == N + 1)   /* if init_genrand() has not been called, */
+    if (mti == UTIL_N + 1)  /* if init_genrand() has not been called, */
       init_genrand(5489UL); /* a default initial seed is used */
 
-    for (kk = 0; kk < N - M; kk++) {
-      y = (mt[kk] & UPPER_MASK) | (mt[kk + 1] & LOWER_MASK);
-      mt[kk] = mt[kk + M] ^ (y >> 1) ^ mag01[y & 0x1UL];
+    for (kk = 0; kk < UTIL_N - UTIL_M; kk++) {
+      y = (mt[kk] & UTIL_UPPER_MASK) | (mt[kk + 1] & UTIL_LOWER_MASK);
+      mt[kk] = mt[kk + UTIL_M] ^ (y >> 1) ^ mag01[y & 0x1UL];
     }
-    for (; kk < N - 1; kk++) {
-      y = (mt[kk] & UPPER_MASK) | (mt[kk + 1] & LOWER_MASK);
-      mt[kk] = mt[kk + (M - N)] ^ (y >> 1) ^ mag01[y & 0x1UL];
+    for (; kk < UTIL_N - 1; kk++) {
+      y = (mt[kk] & UTIL_UPPER_MASK) | (mt[kk + 1] & UTIL_LOWER_MASK);
+      mt[kk] = mt[kk + (UTIL_M - UTIL_N)] ^ (y >> 1) ^ mag01[y & 0x1UL];
     }
-    y = (mt[N - 1] & UPPER_MASK) | (mt[0] & LOWER_MASK);
-    mt[N - 1] = mt[M - 1] ^ (y >> 1) ^ mag01[y & 0x1UL];
+    y = (mt[UTIL_N - 1] & UTIL_UPPER_MASK) | (mt[0] & UTIL_LOWER_MASK);
+    mt[UTIL_N - 1] = mt[UTIL_M - 1] ^ (y >> 1) ^ mag01[y & 0x1UL];
 
     mti = 0;
   }
@@ -43,20 +48,19 @@ unsigned long INTELLI::UtilityFunctions::genrand_int32() {
 
   return y;
 }
-INTELLI::UtilityFunctions::UtilityFunctions() {
-  mti = N + 1; /* mti==N+1 means mt[N] is not initialized */
+UtilityFunctions::UtilityFunctions() {
+  mti = UTIL_N + 1; /* mti==N+1 means mt[N] is not initialized */
 }
 
 /**
  * initializes mt[N] with a seed
  * @param s
  */
-void INTELLI::UtilityFunctions::init_genrand(unsigned long s) {
+void UtilityFunctions::init_genrand(unsigned long s) {
   /* initializes mt[N] with a seed */
   mt[0] = s & 0xffffffffUL;
-  for (mti = 1; mti < N; mti++) {
-    mt[mti] =
-        (1812433253UL * (mt[mti - 1] ^ (mt[mti - 1] >> 30)) + mti);
+  for (mti = 1; mti < UTIL_N; mti++) {
+    mt[mti] = (1812433253UL * (mt[mti - 1] ^ (mt[mti - 1] >> 30)) + mti);
     /* See Knuth TAOCP Vol2. 3rd Ed. P.106 for multiplier. */
     /* In the previous versions, MSBs of the seed affect   */
     /* only MSBs of the array mt[].                        */
@@ -70,10 +74,82 @@ void INTELLI::UtilityFunctions::init_genrand(unsigned long s) {
  *  generates a random number on (0,1)-real-interval
  * @return
  */
-double INTELLI::UtilityFunctions::genrand_real3() {
-  return (((double) genrand_int32()) + 0.5) * (1.0 / 4294967296.0);
+double UtilityFunctions::genrand_real3() {
+  return (((double)genrand_int32()) + 0.5) * (1.0 / 4294967296.0);
   /* divided by 2^32 */
 }
-std::shared_ptr<std::barrier<>> INTELLI::UtilityFunctions::createBarrier(int count) {
+std::shared_ptr<std::barrier<>> UtilityFunctions::createBarrier(int count) {
   return std::make_shared<std::barrier<>>(count);
+}
+
+bool UtilityFunctions::closeTo(scalar_t a, scalar_t b) noexcept {
+  return std::abs(a - b) < std::numeric_limits<scalar_t>::epsilon();
+}
+
+UtilityFunctions::divideResult
+UtilityFunctions::unevenDivide(size_t i, size_t m, size_t n) noexcept {
+
+  auto base = m / n;
+  auto extra = m % n;
+
+  if (i < extra) {
+    return divideResult{i * (base + 1), base + 1};
+  } else {
+    return divideResult{i * base + extra, base};
+  }
+}
+
+scalar_t UtilityFunctions::spectralNorm(const Matrix &mat) {
+  const Eigen::BDCSVD<Matrix> svd{mat};
+
+  return svd.singularValues().diagonal()[0];
+}
+
+#if defined(__GNUC__) && defined(__cplusplus)
+uint64_t UtilityFunctions::trailingZeros(uint64_t n) {
+  return __builtin_ctzll(n);
+}
+
+uint64_t UtilityFunctions::leadingZeros(uint64_t n) {
+  return __builtin_clzll(n);
+}
+#endif
+
+uint64_t UtilityFunctions::nextPowerOfTwo(uint64_t n) {
+  return (n <= 1)
+             ? 1
+             : (std::numeric_limits<size_t>::max() >> leadingZeros(n - 1)) + 1;
+}
+
+void UtilityFunctions::qr(Matrix &q, Matrix &r, bool transposed) {
+  auto n = q.cols();
+  INTELLI_ASSERT(r.rows() == n, "r is not (n, n) matrix");
+  INTELLI_ASSERT(r.cols() == n, "r is not (n, n) matrix");
+
+  for (int k = 0; k < n; ++k) {
+    for (int i = 0; i < k; ++i) {
+      auto [r_row, r_col] = transposed ? std::array{k, i} : std::array{i, k};
+      auto d = q.col(i).dot(q.col(k));
+
+      if (isZero(d)) {
+        d = 0.0;
+      }
+
+      if (std::isnan(d)) {
+        INTELLI_DEBUG("Found NaN (" << r_row << ", " << r_col << ") with "
+                                    << q.col(i) << " and " << q.col(k));
+      }
+      r(r_row, r_col) = d;
+      q.col(k).noalias() -= d * q.col(i);
+    }
+
+    auto norm = q.col(k).norm();
+    if (isZero(norm)) {
+      norm = 0.0;
+    }
+
+    r(k, k) = norm;
+    q.col(k) /= norm;
+    INTELLI_DEBUG("Norm " << k << " = " << norm);
+  }
 }

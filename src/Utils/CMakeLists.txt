@@ -1,3 +1,7 @@
 add_sources(
-        UtilityFunctions.cpp
+    UtilityFunctions.cpp
+    ZeroedColumns.cpp
+    Config.cpp
 )
+
+add_subdirectory(Meter)
