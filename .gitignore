@@ -31,10 +31,12 @@
 *.out
 *.app
 
-/cmake-build-debug/
-/cmake-build-debug/_deps/
-/cmake-build-release/
-/cmake-build-release/_deps/
+/cmake-build-debug/*
+/cmake-build-release/*
+
+!/cmake-build-debug/generate_cmake.sh
+!/cmake-build-release/generate_cmake.sh
+
 compile_commands.json
 /.cmake
 benchmark.log
