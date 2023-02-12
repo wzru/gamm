@@ -19,7 +19,7 @@ class Bamm {
 public:
   struct result;
 
-  Bamm(size_t l, scalar_t beta, SvdUPtr svd) : svd{std::move(svd)}, l{l} {
+  Bamm(size_t l, scalar_t beta, SvdUPtr svd) : l{l}, svd{std::move(svd)} {
     attenuateVec.resize(l);
     for (size_t i = 0; i < l; ++i) {
       attenuateVec[i] = std::expm1((scalar_t)i * beta / ((scalar_t)l - 1.0)) /
@@ -74,18 +74,19 @@ protected:
   void parameterizedReduceRank(DiagonalMatrix &sv) const;
 
   void reductionStepSetup();
-  bool reductionStepSvdStep();
+  bool reductionStepSvdStep(size_t nsteps = 0);
   void reductionStepFinish();
 
+  size_t l;
   size_t xi;
   std::optional<MatrixPtr> x, y, bx, by;
   SvdUPtr svd;
   ZeroedColumns zeroedColumns;
 
 private:
-  size_t l;
   Vector attenuateVec;
 };
+
 typedef std::unique_ptr<Bamm> BammUPtr;
 } // namespace GAMM
 #endif

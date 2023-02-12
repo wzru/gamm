@@ -1,22 +1,23 @@
 // Copyright (C) 2021 by the IntelliStream team
 // (https://github.com/intellistream)
 
-#define EIGEN_FAST_MATH 0
-
 /**
  * @brief This is the main entry point of the entire program.
  * We use this as the entry point for benchmarking.
  */
-#include "Amm/Bamm.hpp"
-#include "Utils/Meter/AbstractEnergyMeter.hpp"
-#include "Utils/Meter/JetsonEnergyMeter.hpp"
-#include "Utils/UtilityFunctions.hpp"
-#include <Amm/Single.hpp>
 #include <BS_thread_pool.hpp>
+#include <iomanip>
+#include <memory>
+#include <optional>
+
+#include <Amm/Bamm.hpp>
+#include <Amm/IntraParallel.hpp>
+#include <Amm/Single.hpp>
 #include <Utils/Config.hpp>
 #include <Utils/Logger.hpp>
-#include <iomanip>
-#include <optional>
+#include <Utils/Meter/AbstractEnergyMeter.hpp>
+#include <Utils/Meter/JetsonEnergyMeter.hpp>
+#include <Utils/UtilityFunctions.hpp>
 
 void runFunction(std::string_view name, GAMM::BammUPtr bamm,
                  const GAMM::MatrixPtr &x, const GAMM::MatrixPtr &y,
@@ -25,7 +26,7 @@ void runFunction(std::string_view name, GAMM::BammUPtr bamm,
 
 int main(int argc, char **argv) {
   // Setup Logs.
-  setupLogging("benchmark.log", LOG_NONE);
+  setupLogging("benchmark.log", LOG_INFO);
 
   const GAMM::Config config{argc, argv};
 
@@ -63,9 +64,17 @@ int main(int argc, char **argv) {
     INTELLI_INFO("No energy meter");
   }
 
-  if (config.bins.single) {
-    runFunction("single", std::make_unique<GAMM::Single>(config.l, config.beta),
-                x, y, z, energyMeter);
+  // if (config.bins.single) {
+  //   runFunction("single-threaded",
+  //               std::make_unique<GAMM::Single>(config.l, config.beta), x, y,
+  //               z, energyMeter);
+  // }
+
+  if (config.bins.intra) {
+    runFunction(
+        "intra-parallel",
+        std::make_unique<GAMM::IntraParallel>(config.l, config.beta, config.t),
+        x, y, z, energyMeter);
   }
 }
 

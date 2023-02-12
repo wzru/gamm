@@ -1,7 +1,7 @@
 // Copyright (C) 2023 by the INTELLI team (https://github.com/intellistream)
 
-#ifndef IntelliStream_SRC_SVD_SequentialJTS_HPP_
-#define IntelliStream_SRC_SVD_SequentialJTS_HPP_
+#ifndef IntelliStream_SRC_SVD_ParallelJTS_HPP_
+#define IntelliStream_SRC_SVD_ParallelJTS_HPP_
 
 #include <Eigen/Dense>
 #include <atomic>
@@ -11,41 +11,28 @@
 #include <BS_thread_pool.hpp>
 #include <limits>
 
-#include "Svd/Svd.hpp"
+#include "Svd/AbstractJTS.hpp"
 #include "Utils/UtilityFunctions.hpp"
 
 namespace GAMM {
-class ParallelJTS : public Svd {
+class ParallelJTS : public AbstractJTS {
 public:
-  struct Options {
-    size_t tau = 32, maxSweeps = 100, t;
-    scalar_t tol = 1e-7;
-    BS::thread_pool_ptr pool;
-
-    Options(BS::thread_pool_ptr pool)
-        : t{pool->get_thread_count() + 1}, pool{pool} {}
-  };
-
-  ParallelJTS(Options options)
-      : options{std::move(options)}, barrier{
-                                         static_cast<ptrdiff_t>(options.t)} {}
+  ParallelJTS(size_t t)
+      : AbstractJTS(), pool{std::make_shared<BS::thread_pool>(t - 1)},
+        barrier(t) {}
+  ParallelJTS(Options options, BS::thread_pool_ptr pool)
+      : AbstractJTS(options), pool{pool},
+        barrier(pool->get_thread_count() + 1) {}
 
   virtual void startSvd(Matrix matrix) override;
   virtual bool svdStep() override;
   virtual bool svdStep(size_t nsteps) override;
-  virtual void finishSvd() override;
 
 private:
   static constexpr size_t COMPLETED = std::numeric_limits<size_t>::max();
 
-  constexpr size_t nColumnPairs() const noexcept {
-    return b.cols() * (b.cols() - 1) / 2;
-  }
-  constexpr size_t npivots() const noexcept {
-    return nColumnPairs() / options.tau;
-  }
-
-  auto &p() { return pToUse ? p2 : p1; }
+  auto &getP() noexcept { return pToUse ? p2 : p1; }
+  size_t getT() const noexcept { return pool->get_thread_count() + 1; }
 
   bool workerTask(size_t workerId, size_t nsteps);
 
@@ -53,11 +40,7 @@ private:
   void workerTaskPhase2(size_t workerId);
   void workerTaskPhase3(size_t workerId);
 
-  Options options;
-
-  size_t iterNumber;
-  Matrix b;
-  scalar_t delta;
+  BS::thread_pool_ptr pool;
 
   std::vector<ColumnPair> p1;
   std::vector<ColumnPair> p2;

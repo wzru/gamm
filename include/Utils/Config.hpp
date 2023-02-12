@@ -25,22 +25,32 @@ public:
   Config() {}
 
   // Construct from a config file
-  Config(std::string_view configPath) noexcept { useConfigFile(configPath); }
+  Config(std::string_view configPath) noexcept {
+    useConfigFile(configPath);
+
+    if (bins.isEmpty()) {
+      bins = RUN_ALL;
+    }
+  }
 
   // Construct using cli arguments
   Config(int argc, const char *const *argv) noexcept;
 
   struct Bins {
     std::uint8_t single : 1, intra : 1, inter : 1, combined : 1, dynamic : 1;
+    bool isEmpty() {
+      return (single == 0) && (intra == 0) && (inter == 0) && (combined == 0) &&
+             (dynamic == 0);
+    }
   };
 
-  static constexpr Bins NONE = {0, 0, 0, 0, 0};
+  static constexpr Bins RUN_NONE = {0, 0, 0, 0, 0};
   static constexpr Bins RUN_ALL = {1, 1, 1, 1, 1};
 
   std::string x{"./benchmark/datasets/x.dat"}, y{"./benchmark/datasets/y.dat"};
   size_t l{400}, t{std::thread::hardware_concurrency()};
   scalar_t beta{28.0};
-  Bins bins{RUN_ALL};
+  Bins bins{RUN_NONE};
 
   std::optional<matrices> loadMatrices() const noexcept;
 

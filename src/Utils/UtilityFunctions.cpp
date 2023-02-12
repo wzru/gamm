@@ -5,6 +5,7 @@
 #include <Utils/Logger.hpp>
 #include <Utils/UtilityFunctions.hpp>
 #include <cmath>
+#include <cstdint>
 #include <limits>
 
 using namespace GAMM;
@@ -118,7 +119,8 @@ uint64_t UtilityFunctions::leadingZeros(uint64_t n) {
 uint64_t UtilityFunctions::nextPowerOfTwo(uint64_t n) {
   return (n <= 1)
              ? 1
-             : (std::numeric_limits<size_t>::max() >> leadingZeros(n - 1)) + 1;
+             : (std::numeric_limits<uint64_t>::max() >> leadingZeros(n - 1)) +
+                   1;
 }
 
 void UtilityFunctions::qr(Matrix &q, Matrix &r, bool transposed) {
@@ -135,9 +137,11 @@ void UtilityFunctions::qr(Matrix &q, Matrix &r, bool transposed) {
         d = 0.0;
       }
 
+      if (std::isinf(d)) {
+        INTELLI_ERROR("Found inf");
+      }
       if (std::isnan(d)) {
-        INTELLI_DEBUG("Found NaN (" << r_row << ", " << r_col << ") with "
-                                    << q.col(i) << " and " << q.col(k));
+        INTELLI_ERROR("Found NaN");
       }
       r(r_row, r_col) = d;
       q.col(k).noalias() -= d * q.col(i);
@@ -146,10 +150,12 @@ void UtilityFunctions::qr(Matrix &q, Matrix &r, bool transposed) {
     auto norm = q.col(k).norm();
     if (isZero(norm)) {
       norm = 0.0;
+    } else {
+      q.col(k) /= norm;
     }
 
     r(k, k) = norm;
-    q.col(k) /= norm;
+
     INTELLI_DEBUG("Norm " << k << " = " << norm);
   }
 }

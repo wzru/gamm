@@ -131,10 +131,15 @@ Config::Config(int argc, const char *const argv[]) noexcept {
     y = vm["y"].as<std::string>();
   }
 
-  if (vm.count("bins")) {
-    for (const auto &bin : vm["bins"].as<std::vector<std::string>>()) {
+  std::cout << "Bin count " << vm.count("bin") << '\n';
+  if (vm.count("bin")) {
+    for (const auto &bin : vm["bin"].as<std::vector<std::string>>()) {
       trySetBin(bin, bins);
     }
+  }
+
+  if (bins.isEmpty()) {
+    bins = RUN_ALL;
   }
 }
 

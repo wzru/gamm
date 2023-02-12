@@ -1,4 +1,3 @@
-
 #include "Amm/Bamm.hpp"
 #include "Utils/Logger.hpp"
 #include "Utils/UtilityFunctions.hpp"
@@ -20,13 +19,13 @@ void Bamm::parameterizedReduceRank(DiagonalMatrix &sv) const {
 }
 
 void Bamm::reductionStepSetup() {
-  auto end = xi + zeroedColumns.nzeroed();
+  auto end = std::min(xi + zeroedColumns.nzeroed(), (size_t)x.value()->cols());
 
   INTELLI_DEBUG("Copying " << (end - xi) << " columns into bx and by");
 
   for (size_t i = xi; i < end; ++i) {
     auto zeroCol = zeroedColumns.getNextZeroed();
-    INTELLI_TRACE("Copying column " << i << " to column " << zeroCol);
+    // INTELLI_WARNING("Copying column " << i << " to column " << zeroCol);
     bx.value()->col(zeroCol) = x.value()->col(i);
     by.value()->col(zeroCol) = y.value()->col(i);
   }
@@ -54,7 +53,7 @@ void Bamm::reductionStepSetup() {
   svd->startSvd(std::move(rx));
 }
 
-bool Bamm::reductionStepSvdStep() { return svd->svdStep(); }
+bool Bamm::reductionStepSvdStep(size_t nsteps) { return svd->svdStep(nsteps); }
 
 void Bamm::reductionStepFinish() {
   svd->finishSvd();

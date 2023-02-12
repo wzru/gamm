@@ -7,36 +7,19 @@
 #include <compare>
 #include <memory>
 
-#include "Svd/Svd.hpp"
+#include "Svd/AbstractJTS.hpp"
 #include "Utils/UtilityFunctions.hpp"
 
 namespace GAMM {
-class SequentialJTS : public Svd {
+class SequentialJTS : public AbstractJTS {
 public:
-  struct Options {
-    size_t tau = 32, maxSweeps = 100;
-    scalar_t tol = 1e-7;
-  };
-
-  SequentialJTS() : options{} {}
-  SequentialJTS(Options options) : options{std::move(options)} {}
+  SequentialJTS() : AbstractJTS() {}
+  SequentialJTS(Options options) : AbstractJTS(options) {}
 
   virtual void startSvd(Matrix matrix) override;
   virtual bool svdStep() override;
-  virtual void finishSvd() override;
 
 private:
-  constexpr size_t nColumnPairs() const noexcept {
-    return u.cols() * (u.cols() - 1) / 2;
-  }
-  constexpr size_t npivots() const noexcept {
-    return nColumnPairs() / options.tau;
-  }
-
-  Options options;
-
-  size_t iterNumber{0};
-  scalar_t delta;
   std::vector<ColumnPair> p{};
   std::vector<JacobiRotation> q{};
 };

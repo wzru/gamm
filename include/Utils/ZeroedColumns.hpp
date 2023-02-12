@@ -5,6 +5,7 @@
 
 #include <Eigen/Dense>
 #include <cstddef>
+#include <iostream>
 #include <iterator>
 #include <limits>
 #include <vector>
@@ -27,18 +28,8 @@ public:
     }
   }
 
-  void resizeFilled(size_t size) {
-    // Empty nextZeroed and then fill it with NON_ZERO
-    nextZeroed.clear();
-    nextZeroed.resize(size, NON_ZERO);
-    head = size;
-  }
-  void resizeEmpty(size_t size) {
-    resizeFilled(size);
-    for (int i = size - 1; i >= 0; --i) {
-      setZeroed(i);
-    }
-  }
+  void resizeFilled(size_t size);
+  void resizeEmpty(size_t size);
 
   size_t nzeroed() const noexcept { return zeroedCount; }
   void setZeroed(size_t index);
