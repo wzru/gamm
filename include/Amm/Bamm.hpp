@@ -19,7 +19,8 @@ class Bamm {
 public:
   struct result;
 
-  Bamm(size_t l, scalar_t beta, SvdUPtr svd) : l{l}, svd{std::move(svd)} {
+  Bamm(size_t l, scalar_t beta, SvdUPtr svd)
+      : l{l}, beta{beta}, svd{std::move(svd)} {
     attenuateVec.resize(l);
     for (size_t i = 0; i < l; ++i) {
       attenuateVec[i] = std::expm1((scalar_t)i * beta / ((scalar_t)l - 1.0)) /
@@ -27,39 +28,32 @@ public:
     }
   }
 
-  MatrixPtr multiply(MatrixPtr x, MatrixPtr y) {
-    bx = std::make_shared<Matrix>(x->rows(), l);
-    by = std::make_shared<Matrix>(y->rows(), l);
-    this->x = x;
-    this->y = y;
+  MatrixPtr multiply(Matrix &x, Matrix &y) {
+    bx = std::make_shared<Matrix>(x.rows(), l);
+    by = std::make_shared<Matrix>(y.rows(), l);
+
+    auto d = x.cols();
+    this->x = x.leftCols(d);
+    this->y = y.leftCols(d);
 
     zeroedColumns.resizeEmpty(l);
+    xi = 0;
 
-    INTELLI_TRACE("x size (" << x->rows() << ", " << x->cols() << ")");
-    INTELLI_TRACE("y size (" << y->rows() << ", " << y->cols() << ")");
-
-    INTELLI_TRACE("bx size (" << bx.value()->rows() << ", "
-                              << bx.value()->cols() << ")");
-    INTELLI_TRACE("by size (" << by.value()->rows() << ", "
-                              << by.value()->cols() << ")");
-
-    INTELLI_DEBUG("Going to start reducing");
     reduce();
-    INTELLI_DEBUG("Reduced");
 
     *bx.value() *= by.value()->transpose();
 
     return std::move(*bx);
   }
 
-  void reduce(MatrixPtr x, MatrixPtr y, MatrixPtr bx, MatrixPtr by) {
+  void reduce(MatrixRef x, MatrixRef y, MatrixPtr bx, MatrixPtr by) {
     this->bx = std::move(bx);
     this->by = std::move(by);
     this->x = std::move(x);
     this->y = std::move(y);
 
-    // TODO, resize zeroedColumns
-    INTELLI_NOT_IMPLEMENTED();
+    zeroedColumns.fromMatrix(*this->bx.value());
+    xi = 0;
 
     reduce();
   }
@@ -74,12 +68,14 @@ protected:
   void parameterizedReduceRank(DiagonalMatrix &sv) const;
 
   void reductionStepSetup();
-  bool reductionStepSvdStep(size_t nsteps = 0);
+  bool reductionStepSvdStep(size_t nsteps = 1);
   void reductionStepFinish();
 
   size_t l;
+  scalar_t beta;
   size_t xi;
-  std::optional<MatrixPtr> x, y, bx, by;
+  std::optional<MatrixRef> x, y;
+  std::optional<MatrixPtr> bx, by;
   SvdUPtr svd;
   ZeroedColumns zeroedColumns;
 

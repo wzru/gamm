@@ -11,6 +11,7 @@
 #include <optional>
 
 #include <Amm/Bamm.hpp>
+#include <Amm/InterParallel.hpp>
 #include <Amm/IntraParallel.hpp>
 #include <Amm/Single.hpp>
 #include <Utils/Config.hpp>
@@ -64,16 +65,23 @@ int main(int argc, char **argv) {
     INTELLI_INFO("No energy meter");
   }
 
-  // if (config.bins.single) {
-  //   runFunction("single-threaded",
-  //               std::make_unique<GAMM::Single>(config.l, config.beta), x, y,
-  //               z, energyMeter);
-  // }
+  if (config.bins.single) {
+    runFunction("single-threaded",
+                std::make_unique<GAMM::Single>(config.l, config.beta), x, y, z,
+                energyMeter);
+  }
 
   if (config.bins.intra) {
     runFunction(
         "intra-parallel",
         std::make_unique<GAMM::IntraParallel>(config.l, config.beta, config.t),
+        x, y, z, energyMeter);
+  }
+
+  if (config.bins.inter) {
+    runFunction(
+        "inter-parallel",
+        std::make_unique<GAMM::InterParallel>(config.l, config.beta, config.t),
         x, y, z, energyMeter);
   }
 }
@@ -92,7 +100,7 @@ void runFunction(std::string_view name, GAMM::BammUPtr bamm,
 
   BS::timer tmr;
   tmr.start();
-  auto z_amm = bamm->multiply(x, y);
+  auto z_amm = bamm->multiply(*x, *y);
   tmr.stop();
 
   std::optional<GAMM::AbstractEnergyMeter::Readings> energyReadings{};

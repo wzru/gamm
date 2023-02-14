@@ -155,7 +155,5 @@ void UtilityFunctions::qr(Matrix &q, Matrix &r, bool transposed) {
     }
 
     r(k, k) = norm;
-
-    INTELLI_DEBUG("Norm " << k << " = " << norm);
   }
 }

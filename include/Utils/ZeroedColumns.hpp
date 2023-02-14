@@ -20,7 +20,8 @@ public:
       : head{size}, nextZeroed(std::vector{size, NON_ZERO}) {}
 
   ZeroedColumns(const Matrix &matrix)
-      : nextZeroed(std::vector{(size_t)matrix.cols(), NON_ZERO}) {
+      : head{(size_t)matrix.cols()},
+        nextZeroed(std::vector{(size_t)matrix.cols(), NON_ZERO}) {
     for (int i = 0; i < matrix.cols(); ++i) {
       if (matrix.col(i).unaryExpr(std::ref(UtilityFunctions::isZero)).all()) {
         setZeroed(i);
@@ -30,6 +31,7 @@ public:
 
   void resizeFilled(size_t size);
   void resizeEmpty(size_t size);
+  void fromMatrix(const Matrix &matrix);
 
   size_t nzeroed() const noexcept { return zeroedCount; }
   void setZeroed(size_t index);

@@ -50,10 +50,6 @@ bool ParallelJTS::workerTask(size_t workerId, size_t nsteps) {
   // Do not go past maxSweeps specified by the user
   size_t maxIters = std::min(iterNumber + nsteps, options.maxSweeps);
 
-  if (workerId == 0) {
-    INTELLI_INFO("MAX_ITERs " << maxIters);
-  }
-
   for (size_t i = iterNumber; i < maxIters; ++i) {
     // ============  PHASE 1  ============
     // Generate columns on which rotations will be applied
@@ -89,7 +85,6 @@ bool ParallelJTS::workerTask(size_t workerId, size_t nsteps) {
 
   if (workerId == 0) {
     iterNumber = maxIters;
-    INTELLI_INFO("iterNumber " << iterNumber);
   }
 
   return iterNumber == options.maxSweeps;

@@ -20,10 +20,25 @@ void ZeroedColumns::resizeEmpty(size_t size) {
   zeroedCount = size;
 }
 
+void ZeroedColumns::fromMatrix(const Matrix &matrix) {
+  resizeFilled(matrix.cols());
+  for (int i = 0; i < matrix.cols(); ++i) {
+    auto isZero =
+        matrix.col(i).unaryExpr(std::ref(UtilityFunctions::isZero)).all();
+    // std::cout << "Index " << i << " is zero? " << isZero << "\n";
+    if (isZero) {
+      setZeroed(i);
+    }
+  }
+}
+
 void ZeroedColumns::setZeroed(size_t index) {
   INTELLI_TRACE("SetZeroed " << index);
   if (nextZeroed[index] != NON_ZERO) {
     INTELLI_WARNING("Setting already zeroed column (" << index << ") to zero");
+    // Reduce zeroedCount so that increment later will restore it to the same
+    // count
+    zeroedCount--;
   }
 
   nextZeroed[index] = head;

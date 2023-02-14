@@ -5,12 +5,11 @@
 using namespace GAMM;
 
 void IntraParallel::reduce() {
-  while ((long int)xi < x.value()->cols()) {
+  auto maxSweeps = dynamic_cast<ParallelJTS &>(*svd).getOptions().maxSweeps;
+  while ((long int)xi < x.value().cols()) {
     reductionStepSetup();
-    INTELLI_ASSERT(
-        reductionStepSvdStep(
-            dynamic_cast<ParallelJTS &>(*svd).getOptions().maxSweeps),
-        "Running maxSweeps number of steps");
+    INTELLI_ASSERT(reductionStepSvdStep(maxSweeps),
+                   "Running maxSweeps number of steps");
     reductionStepFinish();
   }
 }
