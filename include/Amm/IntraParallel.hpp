@@ -10,6 +10,7 @@
 #include <Eigen/Dense>
 
 #include "Amm/Bamm.hpp"
+#include "BS_thread_pool.hpp"
 #include "Svd/ParallelJTS.hpp"
 #include "Utils/ZeroedColumns.hpp"
 
@@ -19,6 +20,8 @@ class IntraParallel : public Bamm {
 public:
   IntraParallel(size_t l, scalar_t beta, size_t t)
       : Bamm(l, beta, std::make_unique<ParallelJTS>(t)) {}
+  IntraParallel(size_t l, scalar_t beta, BS::thread_pool_ptr pool, size_t t)
+      : Bamm(l, beta, std::make_unique<ParallelJTS>(pool, t)) {}
   void reduce() override;
 };
 } // namespace GAMM

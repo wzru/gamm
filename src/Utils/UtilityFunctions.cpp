@@ -133,16 +133,9 @@ void UtilityFunctions::qr(Matrix &q, Matrix &r, bool transposed) {
       auto [r_row, r_col] = transposed ? std::array{k, i} : std::array{i, k};
       auto d = q.col(i).dot(q.col(k));
 
-      if (isZero(d)) {
-        d = 0.0;
-      }
+      INTELLI_VERIFY(!std::isinf(d), "Found inf in QR");
+      INTELLI_VERIFY(!std::isnan(d), "Found NaN in QR");
 
-      if (std::isinf(d)) {
-        INTELLI_ERROR("Found inf");
-      }
-      if (std::isnan(d)) {
-        INTELLI_ERROR("Found NaN");
-      }
       r(r_row, r_col) = d;
       q.col(k).noalias() -= d * q.col(i);
     }

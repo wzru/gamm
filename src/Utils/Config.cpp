@@ -163,8 +163,6 @@ std::optional<std::shared_ptr<Matrix>> loadMatrix(const char *file) {
   auto n = readInt(f);
   auto m = readInt(f);
 
-  INTELLI_DEBUG("Loading matrix with dimensions (" << n << ", " << m << ")");
-
   auto mat = std::make_shared<Matrix>(n, m);
 
   for (uint64_t i = 0; i != n; ++i) {

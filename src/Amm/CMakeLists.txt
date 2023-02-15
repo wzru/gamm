@@ -3,4 +3,5 @@ add_sources(
     Single.cpp
     IntraParallel.cpp
     InterParallel.cpp
+    CombinedParallel.cpp
 )

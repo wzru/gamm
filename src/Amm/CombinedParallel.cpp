@@ -1,13 +1,13 @@
-#include "Amm/InterParallel.hpp"
-#include "Amm/Single.hpp"
+#include <cmath>
+
+#include "Amm/CombinedParallel.hpp"
+#include "Amm/IntraParallel.hpp"
 #include "Utils/Logger.hpp"
 
 using namespace GAMM;
 
-void InterParallel::reduce() {
-  auto t = getT();
-
-  std::vector<LockedMatrices> temp{t};
+void CombinedParallel::reduce() {
+  std::vector<LockedMatrices> temp{p};
   matrices.swap(temp);
 
   // The bx,by given to worker 1 are the final bx,by computed once
@@ -21,15 +21,15 @@ void InterParallel::reduce() {
   }
 
   auto d = x.value().cols();
-  if (t * l > (size_t)d) {
+  if (p * l > (size_t)d) {
     INTELLI_WARNING("Not running inter-parallelism due to small size: "
-                    << t << " * " << l << " > " << d);
+                    << p << " * " << l << " > " << d);
     return;
   }
 
-  BS::multi_future<void> tasks(t - 1);
+  BS::multi_future<void> tasks(p - 1);
 
-  for (size_t i = 1; i < t; ++i) {
+  for (size_t i = 1; i < p; ++i) {
     tasks[i - 1] = pool->submit([this, i]() { workerTask(i); });
   }
   workerTask(0);
@@ -38,11 +38,10 @@ void InterParallel::reduce() {
   matrices.clear();
 }
 
-void InterParallel::workerTask(size_t workerId) {
+void CombinedParallel::workerTask(size_t workerId) {
   auto d = x.value().cols();
-  auto t = getT();
   auto nruns = UtilityFunctions::trailingZeros(
-                   workerId | UtilityFunctions::nextPowerOfTwo(t)) +
+                   workerId | UtilityFunctions::nextPowerOfTwo(p)) +
                1;
 
   auto &ownMatrices = matrices[workerId];
@@ -56,7 +55,7 @@ void InterParallel::workerTask(size_t workerId) {
     std::optional<std::lock_guard<std::mutex>> otherGuard;
     if (i > 0) {
       auto otherId = workerId + (1 << (i - 1));
-      if (otherId >= t) {
+      if (otherId >= p) {
         break;
       }
 
@@ -66,7 +65,7 @@ void InterParallel::workerTask(size_t workerId) {
       xcols = matrices[otherId].bx->leftCols(l);
       ycols = matrices[otherId].by->leftCols(l);
     } else {
-      auto [startCol, numCols] = UtilityFunctions::unevenDivide(workerId, d, t);
+      auto [startCol, numCols] = UtilityFunctions::unevenDivide(workerId, d, p);
 
       *ownMatrices.bx = x.value().middleCols(startCol, l);
       *ownMatrices.by = y.value().middleCols(startCol, l);
@@ -78,9 +77,17 @@ void InterParallel::workerTask(size_t workerId) {
           y.value().nestedExpression().middleCols(startCol + l, numCols - l);
     }
 
-    Single bamm(l, beta);
+    auto nthreads = getNumIntraThreads(workerId, (int)i);
+
+    IntraParallel bamm(l, beta, pool, nthreads);
 
     bamm.Bamm::reduce(std::move(xcols.value()), std::move(ycols.value()),
                       ownMatrices.bx, ownMatrices.by);
   }
+}
+
+size_t CombinedParallel::getNumIntraThreads(size_t workerId, int i) {
+  auto numInterThreads = (size_t)std::ceil((double)p / std::pow(2.0, i) - 0.5);
+  return UtilityFunctions::unevenDivide(workerId, getT(), numInterThreads)
+      .length;
 }

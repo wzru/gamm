@@ -49,12 +49,8 @@ protected:
     void applyTo(Matrix::ColXpr col_j, Matrix::ColXpr col_k) const;
   };
 
-  constexpr size_t nColumnPairs() const noexcept {
-    return u.cols() * (u.cols() - 1) / 2;
-  }
-  constexpr size_t npivots() const noexcept {
-    return nColumnPairs() / options.tau;
-  }
+  size_t nColumnPairs() const noexcept { return u.cols() * (u.cols() - 1) / 2; }
+  size_t npivots() const noexcept { return nColumnPairs() / options.tau; }
 
   Options options;
 

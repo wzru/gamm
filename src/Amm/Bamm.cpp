@@ -16,24 +16,27 @@ void Bamm::parameterizedReduceRank(DiagonalMatrix &sv) const {
   diagonal = diagonal.cwiseMax(0.0).cwiseSqrt();
 }
 
-void Bamm::reductionStepSetup() {
+bool Bamm::reductionStepSetup() {
   auto end = std::min(xi + zeroedColumns.nzeroed(), (size_t)x.value().cols());
 
-  INTELLI_DEBUG("Copying " << (end - xi) << " columns into bx and by");
+  INTELLI_TRACE("Copying " << (end - xi) << " columns into bx and by");
+  for (; xi < end; ++xi) {
 
-  for (size_t i = xi; i < end; ++i) {
-    if (x.value().col(i).unaryExpr(std::ref(UtilityFunctions::isZero)).all()) {
+    if (x.value().col(xi).unaryExpr(std::ref(UtilityFunctions::isZero)).all()) {
 
-      INTELLI_TRACE("SKIPPING copying zero col " << i);
+      INTELLI_TRACE("SKIPPING copying zero col " << xi);
       continue;
     }
 
     auto zeroCol = zeroedColumns.getNextZeroed();
 
-    bx.value()->col(zeroCol) = x.value().col(i);
-    by.value()->col(zeroCol) = y.value().col(i);
+    bx.value()->col(zeroCol) = x.value().col(xi);
+    by.value()->col(zeroCol) = y.value().col(xi);
   }
-  xi = end;
+
+  // If there are no more columns to copy then exit early
+  if (xi >= (size_t)x.value().cols())
+    return true;
 
   Matrix rx = Matrix::Zero(l, l);
   Matrix ry_t = Matrix::Zero(l, l);
@@ -44,6 +47,8 @@ void Bamm::reductionStepSetup() {
   rx *= ry_t;
 
   svd->startSvd(std::move(rx));
+
+  return false;
 }
 
 bool Bamm::reductionStepSvdStep(size_t nsteps) { return svd->svdStep(nsteps); }

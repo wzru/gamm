@@ -23,8 +23,6 @@ void ParallelJTS::startSvd(Matrix matrix) {
   p2.resize(nColumnPairs());
   q.resize(npivots());
 
-  auto t = getT();
-
   std::vector<std::pair<std::mutex, size_t>> temp{t};
   sortLocks.swap(temp);
 
@@ -34,7 +32,6 @@ void ParallelJTS::startSvd(Matrix matrix) {
 
 bool ParallelJTS::svdStep() { return svdStep(1); }
 bool ParallelJTS::svdStep(size_t nsteps) {
-  auto t = getT();
   BS::multi_future<void> tasks(t - 1);
 
   for (size_t i = 1; i < t; ++i) {
@@ -92,7 +89,6 @@ bool ParallelJTS::workerTask(size_t workerId, size_t nsteps) {
 
 void ParallelJTS::workerTaskPhase1(size_t workerId) {
   size_t n = u.cols();
-  auto t = getT();
 
   // The start index of the part of p to be written to by this thread, and
   // the number of elements to write
@@ -174,7 +170,7 @@ void ParallelJTS::workerTaskPhase1(size_t workerId) {
 }
 
 void ParallelJTS::workerTaskPhase2(size_t workerId) {
-  for (auto i = workerId; i < npivots(); i += getT()) {
+  for (auto i = workerId; i < npivots(); i += t) {
     std::construct_at(&q[i], getP()[i], u);
   }
 }

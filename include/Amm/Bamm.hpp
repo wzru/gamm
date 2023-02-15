@@ -67,7 +67,7 @@ protected:
 
   void parameterizedReduceRank(DiagonalMatrix &sv) const;
 
-  void reductionStepSetup();
+  bool reductionStepSetup();
   bool reductionStepSvdStep(size_t nsteps = 1);
   void reductionStepFinish();
 

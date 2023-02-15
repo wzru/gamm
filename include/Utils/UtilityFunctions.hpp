@@ -26,7 +26,7 @@ typedef Eigen::Matrix<scalar_t, Eigen::Dynamic, Eigen::Dynamic> Matrix;
 typedef std::shared_ptr<Matrix> MatrixPtr;
 typedef Eigen::Block<Matrix, Eigen::Dynamic, Eigen::Dynamic, true> MatrixRef;
 typedef Eigen::DiagonalMatrix<scalar_t, Eigen::Dynamic> DiagonalMatrix;
-typedef Eigen::Vector<scalar_t, Eigen::Dynamic> Vector;
+typedef Eigen::Matrix<scalar_t, Eigen::Dynamic, 1> Vector;
 
 class UtilityFunctions {
 public:

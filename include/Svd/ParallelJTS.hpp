@@ -18,11 +18,12 @@ namespace GAMM {
 class ParallelJTS : public AbstractJTS {
 public:
   ParallelJTS(size_t t)
-      : AbstractJTS(), pool{std::make_shared<BS::thread_pool>(t - 1)},
+      : AbstractJTS(), pool{std::make_shared<BS::thread_pool>(t - 1)}, t{t},
         barrier(t) {}
-  ParallelJTS(Options options, BS::thread_pool_ptr pool)
-      : AbstractJTS(options), pool{pool},
-        barrier(pool->get_thread_count() + 1) {}
+  ParallelJTS(BS::thread_pool_ptr pool, size_t t)
+      : AbstractJTS(), pool{pool}, t{t}, barrier(t) {}
+  ParallelJTS(Options options, BS::thread_pool_ptr pool, size_t t)
+      : AbstractJTS(options), pool{pool}, t{t}, barrier(t) {}
 
   virtual void startSvd(Matrix matrix) override;
   virtual bool svdStep() override;
@@ -32,7 +33,6 @@ private:
   static constexpr size_t COMPLETED = std::numeric_limits<size_t>::max();
 
   auto &getP() noexcept { return pToUse ? p2 : p1; }
-  size_t getT() const noexcept { return pool->get_thread_count() + 1; }
 
   bool workerTask(size_t workerId, size_t nsteps);
 
@@ -41,6 +41,7 @@ private:
   void workerTaskPhase3(size_t workerId);
 
   BS::thread_pool_ptr pool;
+  const size_t t;
 
   std::vector<ColumnPair> p1;
   std::vector<ColumnPair> p2;

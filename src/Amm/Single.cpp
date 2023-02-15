@@ -7,10 +7,9 @@ using namespace GAMM;
 void Single::reduce() {
   auto maxSweeps = dynamic_cast<SequentialJTS &>(*svd).getOptions().maxSweeps;
 
-  while ((long int)xi < x.value().cols()) {
-    reductionStepSetup();
-    while (!reductionStepSvdStep(maxSweeps)) {
-    }
+  while (!reductionStepSetup()) {
+    INTELLI_VERIFY(reductionStepSvdStep(maxSweeps),
+                   "Running maxSweeps number of steps");
     reductionStepFinish();
   }
 }

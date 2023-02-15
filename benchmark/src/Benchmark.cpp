@@ -11,6 +11,7 @@
 #include <optional>
 
 #include <Amm/Bamm.hpp>
+#include <Amm/CombinedParallel.hpp>
 #include <Amm/InterParallel.hpp>
 #include <Amm/IntraParallel.hpp>
 #include <Amm/Single.hpp>
@@ -27,7 +28,7 @@ void runFunction(std::string_view name, GAMM::BammUPtr bamm,
 
 int main(int argc, char **argv) {
   // Setup Logs.
-  setupLogging("benchmark.log", LOG_INFO);
+  setupLogging("benchmark.log", LOG_TRACE);
 
   const GAMM::Config config{argc, argv};
 
@@ -35,7 +36,8 @@ int main(int argc, char **argv) {
 
   auto res = config.loadMatrices();
   if (!res.has_value()) {
-    INTELLI_INFO("Error loading matrices in config. " << argc << argv);
+    INTELLI_FATAL_ERROR("Error loading matrices in config. " << argc << argv);
+    return 1;
   }
 
   auto [x, y] = res.value();
@@ -44,8 +46,8 @@ int main(int argc, char **argv) {
                                     << ") and y(" << y->rows() << ", "
                                     << y->cols() << ')');
 
-  INTELLI_INFO("x: " << (x->block<2, 2>(0, 0)));
-  INTELLI_INFO("y: " << (y->block<2, 2>(0, 0)));
+  INTELLI_INFO("x:\n" << (x->block<2, 2>(0, 0)));
+  INTELLI_INFO("y:\n" << (y->block<2, 2>(0, 0)));
 
   BS::timer tmr;
   tmr.start();
@@ -53,7 +55,7 @@ int main(int argc, char **argv) {
   tmr.stop();
 
   std::cout << "Lib-MM " << tmr.ms() << "ms\n";
-  INTELLI_INFO("z: " << (z.block<2, 2>(0, 0)));
+  INTELLI_INFO("z:\n" << (z.block<2, 2>(0, 0)));
 
   std::optional<GAMM::EnergyMeterPtr> energyMeter{};
 
@@ -84,6 +86,17 @@ int main(int argc, char **argv) {
         std::make_unique<GAMM::InterParallel>(config.l, config.beta, config.t),
         x, y, z, energyMeter);
   }
+
+  if (config.bins.combined) {
+    for (size_t p = 1; p <= config.t; ++p) {
+      std::string s{"combined-parallel-"};
+      s += std::to_string(p);
+      runFunction(s,
+                  std::make_unique<GAMM::CombinedParallel>(
+                      config.l, config.beta, config.t, p),
+                  x, y, z, energyMeter);
+    }
+  }
 }
 
 void runFunction(std::string_view name, GAMM::BammUPtr bamm,
@@ -91,31 +104,30 @@ void runFunction(std::string_view name, GAMM::BammUPtr bamm,
                  const GAMM::Matrix &z,
                  std::optional<GAMM::EnergyMeterPtr> energyMeter) {
 
-  INTELLI_DEBUG("Running " << name << " with energyMeter? "
-                           << energyMeter.has_value());
-  INTELLI_DEBUG("Bamm ptr " << bamm);
+  INTELLI_INFO("Running " << name << " with energyMeter? "
+                          << energyMeter.has_value());
   if (energyMeter.has_value()) {
     energyMeter.value()->startSampling();
   }
+
+  std::optional<GAMM::AbstractEnergyMeter::Readings> energyReadings{};
 
   BS::timer tmr;
   tmr.start();
   auto z_amm = bamm->multiply(*x, *y);
   tmr.stop();
 
-  std::optional<GAMM::AbstractEnergyMeter::Readings> energyReadings{};
-
   if (energyMeter.has_value()) {
     energyReadings = energyMeter.value()->stopSampling();
   }
 
-  std::cout << z_amm->block<2, 2>(0, 0) << std::endl;
+  INTELLI_INFO(name << " z_amm:\n" << (z_amm->block<2, 2>(0, 0)));
 
   *z_amm -= z;
 
   auto err = GAMM::UtilityFunctions::spectralNorm(*z_amm);
 
-  std::cout << ' ' << std::setw(20) << name << ":  Time - " << std::setw(8)
+  std::cout << ' ' << std::setw(23) << name << ":  Time - " << std::setw(8)
             << std::setprecision(4) << ((double)tmr.ms() / 1000.0) << "s;  ";
 
   // TODO check whether the energy readings should be written to CSV

@@ -30,16 +30,13 @@ AbstractJTS::JacobiRotation::JacobiRotation(ColumnPair columnPair,
 
   auto gamma = (mat.col(k).squaredNorm() - mat.col(j).squaredNorm()) /
                (2.0 * columnPair.d);
-  INTELLI_TRACE("GAMMA " << gamma);
   t = std::copysign(1.0 / (std::abs(gamma) + std::sqrt(1 + gamma * gamma)),
                     gamma);
   inv_c = std::sqrt(t * t + 1.0);
   c = 1.0 / inv_c;
   s = t * c;
 
-  if (std::isnan(s)) {
-    INTELLI_ERROR("Found NaN");
-  }
+  INTELLI_VERIFY(!std::isnan(s), "Found NaN in jacobi rotation");
 }
 
 void AbstractJTS::JacobiRotation::applyTo(Matrix &matrix) const {
