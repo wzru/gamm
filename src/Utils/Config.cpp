@@ -83,7 +83,7 @@ void Config::useConfigFile(std::string_view path) noexcept {
   }
 }
 
-Config::Config(int argc, const char *const argv[]) noexcept {
+Config::Config(int argc, const char *const argv[]) {
   // clang-format off
   po::options_description desc("Allowed options");
   desc.add_options()
@@ -94,7 +94,10 @@ Config::Config(int argc, const char *const argv[]) noexcept {
     ("x,x", po::value<std::string>(), "path to the matrix X")
     ("y,y", po::value<std::string>(), "path to the matrix Y")
     ("bin,b", po::value<std::vector<std::string>>(), "binaries to run")
-    ("defaults,d", po::value<std::string>(), "config file to use for defaults");
+    ("defaults,d", po::value<std::string>(), "config file to use for defaults")
+    ("measure-energy,e", "whether to measure the energy consumed by each amm")
+    ("energy-csv,c", po::value<std::string>(), "path to a csv to write detailed energy readings. "
+                                               "Automatically enables measure-energy");
   // clang-format on
 
   po::variables_map vm;
@@ -135,6 +138,15 @@ Config::Config(int argc, const char *const argv[]) noexcept {
     for (const auto &bin : vm["bin"].as<std::vector<std::string>>()) {
       trySetBin(bin, bins);
     }
+  }
+
+  if (vm.count("measure-energy")) {
+    measureEnergy = true;
+  }
+
+  if (vm.count("energy-csv")) {
+    energyCSVPath = vm["energy-csv"].as<std::string>();
+    measureEnergy = true;
   }
 
   if (bins.isEmpty()) {
@@ -233,5 +245,10 @@ std::ostream &GAMM::operator<<(std::ostream &o, Config::Bins const &bins) {
 std::ostream &GAMM::operator<<(std::ostream &o, Config const &config) {
   return o << "Config { x: " << config.x << ", y: " << config.y
            << ", l: " << config.l << ", t: " << config.t
-           << ", beta: " << config.beta << ", bins: " << config.bins << " }";
+           << ", beta: " << config.beta << ", bins: " << config.bins
+           << ", measure-energy: " << (config.measureEnergy ? "true" : "false")
+           << ", energy-csv-file: "
+           << (config.energyCSVPath.has_value() ? config.energyCSVPath.value()
+                                                : "none")
+           << " }";
 }

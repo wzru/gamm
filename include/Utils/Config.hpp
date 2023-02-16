@@ -34,7 +34,7 @@ public:
   }
 
   // Construct using cli arguments
-  Config(int argc, const char *const *argv) noexcept;
+  Config(int argc, const char *const *argv);
 
   struct Bins {
     std::uint8_t single : 1, intra : 1, inter : 1, combined : 1, dynamic : 1;
@@ -51,6 +51,8 @@ public:
   size_t l{400}, t{std::thread::hardware_concurrency()};
   scalar_t beta{28.0};
   Bins bins{RUN_NONE};
+  bool measureEnergy{false};
+  std::optional<std::string> energyCSVPath;
 
   std::optional<matrices> loadMatrices() const noexcept;
 

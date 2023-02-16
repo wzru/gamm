@@ -24,7 +24,8 @@
 void runFunction(std::string_view name, GAMM::BammUPtr bamm,
                  const GAMM::MatrixPtr &x, const GAMM::MatrixPtr &y,
                  const GAMM::Matrix &z,
-                 std::optional<GAMM::EnergyMeterPtr> energyMeter);
+                 std::optional<GAMM::EnergyMeterPtr> energyMeter,
+                 const std::optional<std::string> &energyCSVPath);
 
 int main(int argc, char **argv) {
   // Setup Logs.
@@ -59,32 +60,34 @@ int main(int argc, char **argv) {
 
   std::optional<GAMM::EnergyMeterPtr> energyMeter{};
 
-  // TODO have a measure energy flag
-  if (GAMM::JetsonEnergyMeter::canBeUsed() && false) {
-    INTELLI_INFO("Using Jetson Energy Meter");
-    energyMeter = std::make_shared<GAMM::JetsonEnergyMeter>();
-  } else {
-    INTELLI_INFO("No energy meter");
+  if (config.measureEnergy) {
+    if (GAMM::JetsonEnergyMeter::canBeUsed()) {
+      INTELLI_INFO("Using Jetson Energy Meter");
+      energyMeter = std::make_shared<GAMM::JetsonEnergyMeter>();
+    } else {
+      INTELLI_FATAL_ERROR("No energy meter");
+      return 1;
+    }
   }
 
   if (config.bins.single) {
     runFunction("single-threaded",
                 std::make_unique<GAMM::Single>(config.l, config.beta), x, y, z,
-                energyMeter);
+                energyMeter, config.energyCSVPath);
   }
 
   if (config.bins.intra) {
     runFunction(
         "intra-parallel",
         std::make_unique<GAMM::IntraParallel>(config.l, config.beta, config.t),
-        x, y, z, energyMeter);
+        x, y, z, energyMeter, config.energyCSVPath);
   }
 
   if (config.bins.inter) {
     runFunction(
         "inter-parallel",
         std::make_unique<GAMM::InterParallel>(config.l, config.beta, config.t),
-        x, y, z, energyMeter);
+        x, y, z, energyMeter, config.energyCSVPath);
   }
 
   if (config.bins.combined) {
@@ -94,7 +97,7 @@ int main(int argc, char **argv) {
       runFunction(s,
                   std::make_unique<GAMM::CombinedParallel>(
                       config.l, config.beta, config.t, p),
-                  x, y, z, energyMeter);
+                  x, y, z, energyMeter, config.energyCSVPath);
     }
   }
 }
@@ -102,7 +105,8 @@ int main(int argc, char **argv) {
 void runFunction(std::string_view name, GAMM::BammUPtr bamm,
                  const GAMM::MatrixPtr &x, const GAMM::MatrixPtr &y,
                  const GAMM::Matrix &z,
-                 std::optional<GAMM::EnergyMeterPtr> energyMeter) {
+                 std::optional<GAMM::EnergyMeterPtr> energyMeter,
+                 const std::optional<std::string> &energyCSVPath) {
 
   INTELLI_INFO("Running " << name << " with energyMeter? "
                           << energyMeter.has_value());
@@ -130,8 +134,11 @@ void runFunction(std::string_view name, GAMM::BammUPtr bamm,
   std::cout << ' ' << std::setw(23) << name << ":  Time - " << std::setw(8)
             << std::setprecision(4) << ((double)tmr.ms() / 1000.0) << "s;  ";
 
-  // TODO check whether the energy readings should be written to CSV
   if (energyReadings.has_value()) {
+    if (energyCSVPath.has_value()) {
+      energyReadings.value().writeCSV(energyCSVPath.value().c_str());
+    }
+
     std::cout << "Energy - " << std::setw(8) << std::setprecision(4)
               << (energyReadings.value().energyConsumed()) << "J;  ";
   }
