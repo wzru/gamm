@@ -18,12 +18,10 @@ include(cmake/default.cmake)
 # C++ Standard
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-#gcc 10 g++10
-message(STATUS "sudo add-apt-repository 'deb http://mirrors.kernel.org/ubuntu hirsute main universe'")
+#gcc 11 g++ 11
 message(STATUS "sudo apt-get update")
 message(STATUS "sudo apt install gcc-11 g++-11")
-message(STATUS "sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-11 11")
-message(STATUS "sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-11 11")
+
 
 # Set Optimization Flags
 set(CMAKE_CXX_FLAGS "-std=c++20 -Wall -Werror=return-type -Werror=unused-variable -Werror=unused-parameter -march=native -pthread")
