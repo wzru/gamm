@@ -26,7 +26,7 @@ message(STATUS "sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc
 message(STATUS "sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-11 11")
 
 # Set Optimization Flags
-set(CMAKE_CXX_FLAGS "-std=c++20 -Wall -Werror=return-type -Werror=unused-variable -Werror=unused-parameter -march=native")
+set(CMAKE_CXX_FLAGS "-std=c++20 -Wall -Werror=return-type -Werror=unused-variable -Werror=unused-parameter -march=native -pthread")
 set(CMAKE_CXX_FLAGS_DEBUG "-g -O0 -DNO_RACE_CHECK -DGamm_DEBUG_MODE=1")
 set(CMAKE_CXX_FLAGS_RELEASE "-Wno-ignored-qualifiers -Wno-sign-compare -O3")
 
@@ -70,7 +70,7 @@ else (BOOST_FOUND)
 endif (BOOST_FOUND)
 
 # Eigen
-find_package(Eigen3 3.3 REQUIRED NO_MODULE)
+find_package(Eigen3 3.4 REQUIRED NO_MODULE)
 set(LIBRARIES ${LIBRARIES} Eigen3::Eigen)
 
 if (TARGET Eigen3::Eigen)
