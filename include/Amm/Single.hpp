@@ -20,6 +20,7 @@ public:
   Single(size_t l, scalar_t beta)
       : Bamm(l, beta, std::make_unique<SequentialJTS>()) {}
   void reduce() override;
+  size_t getMaxSweeps();
 };
 } // namespace GAMM
 #endif

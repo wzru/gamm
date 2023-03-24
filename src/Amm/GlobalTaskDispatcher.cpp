@@ -4,22 +4,64 @@
 
 #include "Amm/Bamm.hpp"
 #include "AMM/GlobalTaskDispatcher.hpp"
+#include "Amm/Single.hpp"
 
 using namespace GAMM;
 
-std::deque<int> topological_sort(std::shared_ptr<TaskDAG> dag){
-    std::deque<int> sorted;
-    // TODO implement algorithm
-    return sorted;
+
+
+
+void DAG::addEdge(Task u, Task v) {
+    adjList[u.type].push_back(v);
 }
 
-void execute_task(std::shared_ptr<TaskDAG> dag){
-    std::deque<int> sorted = topological_sort(dag);
-    BS::multi_future<void> tasks(sorted.size());
-    // TODO implement algorithm
-    for (int i : sorted){
-        // TODO map to task and assign to threadpool
+void DAG::dfs(Task v, std::vector<bool>& visited, std::deque<Task>& result) {
+    visited[v.type] = true;
 
+    for (const Task& neighbor : adjList[v.type]) {
+        if (!visited[neighbor.type]) {
+            dfs(neighbor, visited, result);
+        }
+    }
+
+    result.push_front(v);
+}
+
+std::deque<Task> DAG::topologicalSort() {
+    std::deque<Task> result;
+    std::vector<bool> visited(Task::Finish + 1, false);
+
+    for (int i = 0; i <= Task::Finish; ++i) {
+        if (!visited[i]) {
+            dfs(Task(static_cast<Task::Type>(i)), visited, result);
+        }
+    }
+
+    return result;
+}
+
+void GlobalTaskDispatcher::dispatch_task(Single bamm, DAG dag) {
+    std::deque<Task> sortedTasks = dag.topologicalSort();
+    BS::multi_future<void> tasks(sortedTasks.size());
+    //TODO algorithm that improves the utilization of threadpool
+    for (const Task& task : sortedTasks) {
+        switch (task.type) {
+            case Task::Setup:
+                tasks.push_back(pool->submit([this, &bamm] {
+                    bamm.Bamm::reductionStepSetup();
+                }));
+                break;
+            case Task::SvdStep:
+                tasks.push_back(pool->submit([this, &bamm, &task] {
+                    bamm.Bamm::reductionStepSvdStep(task.index);
+                }));
+                break;
+            case Task::Finish:
+                tasks.push_back(pool->submit([this, &bamm] {
+                    bamm.Bamm::reductionStepFinish();
+                }));
+                break;
+        }
     }
 }
 
@@ -44,13 +86,41 @@ void GlobalTaskDispatcher::reduce() {
     }
 
     //generate task DAG and pass to dispatcher
-    auto dag = std::make_shared<TaskDAG>();
-    //TODO assign task to dag
+    DAG dag;
 
-    execute_task(dag);
+    //TODO tree structure matrix splitting and reduction
+    auto &ownMatrices = matrices[0];
+    std::optional<MatrixRef> xcols, ycols;
+    xcols = matrices[1].bx->leftCols(l);
+    ycols = matrices[1].by->leftCols(l);
+    Single bamm(l, beta);
+    bamm.setMatrices(std::move(xcols.value()), std::move(ycols.value()),
+                     ownMatrices.bx, ownMatrices.by);
+
+    auto maxSweeps = bamm.getMaxSweeps();
+
+    /*while (!bamm.Bamm::reductionStepSetup()) {
+        for (int i = 0; i < maxSweeps; ++i) {
+            if (!bamm.Bamm::reductionStepSvdStep(i)) break;
+        }
+        bamm.Bamm::reductionStepFinish();
+    }*/
+
+    Task setup(Task::Setup);
+    Task finish(Task::Finish);
+    dag.addEdge(setup, finish);
+
+    for (int i = 0; i < maxSweeps; ++i) {
+        Task svdStep(Task::SvdStep, i);
+        dag.addEdge(setup, svdStep);
+        dag.addEdge(svdStep, finish);
+    }
+
+    dispatch_task(std::move(bamm), dag);
 
     matrices.clear();
 }
+
 
 
 

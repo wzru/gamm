@@ -9,17 +9,35 @@
 #include <memory>
 #include <mutex>
 #include <optional>
-
+#include <unordered_map>
+#include <unordered_set>
 #include <Eigen/Dense>
 
 #include "Amm/Bamm.hpp"
 #include "BS_thread_pool.hpp"
 #include "Svd/SequentialJTS.hpp"
 #include "Utils/ZeroedColumns.hpp"
+#include "Single.hpp"
+
 
 namespace GAMM {
-    class TaskDAG{
+    struct Task {
+        enum Type { Setup, SvdStep, Finish };
+        Type type;
+        int index; // Only used for SvdStep tasks
+
+        Task(Type type, int index = -1) : type(type), index(index) {}
+    };
+
+    class DAG {
     public:
+        void addEdge(Task u, Task v);
+        std::vector<int> topologicalSort() const;
+        void dfs(Task v, std::vector<bool>& visited, std::deque<Task>& result);
+        std::deque<Task> topologicalSort();
+
+    private:
+        std::vector<std::vector<Task>> adjList = std::vector<std::vector<Task>>(Task::Finish + 1);
 
     };
 
@@ -35,18 +53,17 @@ namespace GAMM {
 
         size_t getT() const { return pool->get_thread_count() + 1; }
 
-        void workerTask(size_t workerId);
-
     public:
         GlobalTaskDispatcher(size_t l, scalar_t beta, BS::thread_pool_ptr pool)
                 : Bamm(l, beta, std::make_unique<SequentialJTS>()), pool{pool},
                   barrier{pool->get_thread_count() + 1} {}
 
         void reduce() override;
-        std::deque<int> topological_sort(std::shared_ptr<TaskDAG> dag);
+
+
+        void dispatch_task(GAMM::Single bamm, DAG dag);
     };
+
+
 }
-
-
-
 #endif //GAMM_GLOBALTASKDISPATCHER_HPP

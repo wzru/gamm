@@ -13,3 +13,7 @@ void Single::reduce() {
     reductionStepFinish();
   }
 }
+
+size_t Single::getMaxSweeps() {
+  return dynamic_cast<SequentialJTS &>(*svd).getOptions().maxSweeps;
+}
