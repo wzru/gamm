@@ -27,6 +27,7 @@ void DAG::dfs(Task v, std::vector<bool>& visited, std::deque<Task>& result) {
     result.push_front(v);
 }
 
+//TODO add multilayer sort
 std::deque<Task> DAG::topologicalSort() {
     std::deque<Task> result;
     std::vector<bool> visited(Task::Finish + 1, false);
@@ -40,27 +41,37 @@ std::deque<Task> DAG::topologicalSort() {
     return result;
 }
 
-void GlobalTaskDispatcher::dispatch_task(Single bamm, DAG dag) {
-    std::deque<Task> sortedTasks = dag.topologicalSort();
-    BS::multi_future<void> tasks(sortedTasks.size());
+void GlobalTaskDispatcher::dispatch_task(Single bamm) {
+    std::deque<Task> sortedTasks = this->dags[0].topologicalSort();
+    // BS::multi_future<bool> tasks(sortedTasks.size());
+    std::future<bool> future;
     //TODO algorithm that improves the utilization of threadpool
-    for (const Task& task : sortedTasks) {
+    while (!sortedTasks.empty()) {
+        Task task = sortedTasks.front();
+        sortedTasks.pop_front();
         switch (task.type) {
             case Task::Setup:
-                tasks.push_back(pool->submit([this, &bamm] {
-                    bamm.Bamm::reductionStepSetup();
-                }));
+                future = pool->submit([this, &bamm] {
+                    return bamm.Bamm::reductionStepSetup();
+                });
                 break;
             case Task::SvdStep:
-                tasks.push_back(pool->submit([this, &bamm, &task] {
-                    bamm.Bamm::reductionStepSvdStep(task.index);
-                }));
+                future = pool->submit([this, &bamm, task] {
+                    return bamm.Bamm::reductionStepSvdStep(task.index);
+                });
                 break;
             case Task::Finish:
-                tasks.push_back(pool->submit([this, &bamm] {
-                    bamm.Bamm::reductionStepFinish();
-                }));
+                future = pool->submit([this, &bamm] {
+                    return bamm.Bamm::reductionStepFinish();
+                });
                 break;
+        }
+        future.wait();
+        // delete the chain of the rest of svd steps
+        if (future.get() == false) {
+            while (!sortedTasks.empty() && sortedTasks.front().type == Task::SvdStep) {
+                sortedTasks.pop_front();
+            }
         }
     }
 }
@@ -85,9 +96,6 @@ void GlobalTaskDispatcher::reduce() {
         return;
     }
 
-    //generate task DAG and pass to dispatcher
-    DAG dag;
-
     //TODO tree structure matrix splitting and reduction
     auto &ownMatrices = matrices[0];
     std::optional<MatrixRef> xcols, ycols;
@@ -108,15 +116,16 @@ void GlobalTaskDispatcher::reduce() {
 
     Task setup(Task::Setup);
     Task finish(Task::Finish);
-    dag.addEdge(setup, finish);
+    dags[0].addEdge(setup, finish);
 
+    // svd steps
     for (int i = 0; i < maxSweeps; ++i) {
         Task svdStep(Task::SvdStep, i);
-        dag.addEdge(setup, svdStep);
-        dag.addEdge(svdStep, finish);
+        dags[0].addEdge(setup, svdStep);
+        dags[0].addEdge(svdStep, finish);
     }
 
-    dispatch_task(std::move(bamm), dag);
+    dispatch_task(std::move(bamm));
 
     matrices.clear();
 }

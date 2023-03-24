@@ -74,7 +74,7 @@ public:
 
     bool reductionStepSetup();
 
-    void reductionStepFinish();
+    bool reductionStepFinish();
 
     bool reductionStepSvdStep(size_t nsteps = 1);
 

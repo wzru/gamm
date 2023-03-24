@@ -32,7 +32,6 @@ namespace GAMM {
     class DAG {
     public:
         void addEdge(Task u, Task v);
-        std::vector<int> topologicalSort() const;
         void dfs(Task v, std::vector<bool>& visited, std::deque<Task>& result);
         std::deque<Task> topologicalSort();
 
@@ -59,9 +58,9 @@ namespace GAMM {
                   barrier{pool->get_thread_count() + 1} {}
 
         void reduce() override;
-
-
-        void dispatch_task(GAMM::Single bamm, DAG dag);
+        //std::vector<std::mutex> mtxs;
+        std::vector<DAG> dags;
+        void dispatch_task(GAMM::Single bamm);
     };
 
 

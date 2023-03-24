@@ -53,7 +53,7 @@ bool Bamm::reductionStepSetup() {
 
 bool Bamm::reductionStepSvdStep(size_t nsteps) { return svd->svdStep(nsteps); }
 
-void Bamm::reductionStepFinish() {
+bool Bamm::reductionStepFinish() {
   svd->finishSvd();
 
   auto &sv = svd->singularValues();
@@ -75,4 +75,5 @@ void Bamm::reductionStepFinish() {
 
   *bx.value() *= u;
   *by.value() *= v;
+  return true;
 }
