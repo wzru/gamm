@@ -41,36 +41,38 @@ std::deque<Task> DAG::topologicalSort() {
     return result;
 }
 
-void GlobalTaskDispatcher::dispatch_task(Single bamm) {
+//TODO improve efficiency
+void GlobalTaskDispatcher::dispatch_task(std::vector<Single> bamms) {
     std::deque<Task> sortedTasks = this->dags[0].topologicalSort();
-    // BS::multi_future<bool> tasks(sortedTasks.size());
     std::future<bool> future;
-    //TODO algorithm that improves the utilization of threadpool
-    while (!sortedTasks.empty()) {
-        Task task = sortedTasks.front();
-        sortedTasks.pop_front();
-        switch (task.type) {
-            case Task::Setup:
-                future = pool->submit([this, &bamm] {
-                    return bamm.Bamm::reductionStepSetup();
-                });
-                break;
-            case Task::SvdStep:
-                future = pool->submit([this, &bamm, task] {
-                    return bamm.Bamm::reductionStepSvdStep(task.index);
-                });
-                break;
-            case Task::Finish:
-                future = pool->submit([this, &bamm] {
-                    return bamm.Bamm::reductionStepFinish();
-                });
-                break;
-        }
-        future.wait();
-        // delete the chain of the rest of svd steps
-        if (future.get() == false) {
-            while (!sortedTasks.empty() && sortedTasks.front().type == Task::SvdStep) {
-                sortedTasks.pop_front();
+    for (auto& bamm : bamms) {
+        //TODO algorithm that improves the utilization of threadpool
+        while (!sortedTasks.empty()) {
+            Task task = sortedTasks.front();
+            sortedTasks.pop_front();
+            switch (task.type) {
+                case Task::Setup:
+                    future = pool->submit([this, &bamm] {
+                        return bamm.Bamm::reductionStepSetup();
+                    });
+                    break;
+                case Task::SvdStep:
+                    future = pool->submit([this, &bamm, task] {
+                        return bamm.Bamm::reductionStepSvdStep(task.index);
+                    });
+                    break;
+                case Task::Finish:
+                    future = pool->submit([this, &bamm] {
+                        return bamm.Bamm::reductionStepFinish();
+                    });
+                    break;
+            }
+            future.wait();
+            // delete the chain of the rest of svd steps
+            if (future.get() == false) {
+                while (!sortedTasks.empty() && sortedTasks.front().type == Task::SvdStep) {
+                    sortedTasks.pop_front();
+                }
             }
         }
     }
@@ -79,6 +81,7 @@ void GlobalTaskDispatcher::dispatch_task(Single bamm) {
 void GlobalTaskDispatcher::reduce() {
     auto t = getT();
 
+    // initially split the matrix t times
     std::vector<LockedMatrices> temp{t};
     matrices.swap(temp);
 
@@ -97,15 +100,23 @@ void GlobalTaskDispatcher::reduce() {
     }
 
     //TODO tree structure matrix splitting and reduction
-    auto &ownMatrices = matrices[0];
-    std::optional<MatrixRef> xcols, ycols;
-    xcols = matrices[1].bx->leftCols(l);
-    ycols = matrices[1].by->leftCols(l);
-    Single bamm(l, beta);
-    bamm.setMatrices(std::move(xcols.value()), std::move(ycols.value()),
-                     ownMatrices.bx, ownMatrices.by);
+    for (int i = 0; i < t; ++i) {
+        Single bamm = getBamm(i, t-i);
+        auto maxSweeps = bamm.getMaxSweeps();
+        Task setup(Task::Setup);
+        Task finish(Task::Finish);
+        dags[i].addEdge(setup, finish);
 
-    auto maxSweeps = bamm.getMaxSweeps();
+        // svd steps
+        for (int j = 0; i < maxSweeps; ++i) {
+            Task svdStep(Task::SvdStep, j);
+            dags[i].addEdge(setup, svdStep);
+            dags[i].addEdge(svdStep, finish);
+        }
+
+        bamms.push_back(std::move(bamm));
+    }
+    dispatch_task(std::move(bamms));
 
     /*while (!bamm.Bamm::reductionStepSetup()) {
         for (int i = 0; i < maxSweeps; ++i) {
@@ -114,22 +125,19 @@ void GlobalTaskDispatcher::reduce() {
         bamm.Bamm::reductionStepFinish();
     }*/
 
-    Task setup(Task::Setup);
-    Task finish(Task::Finish);
-    dags[0].addEdge(setup, finish);
-
-    // svd steps
-    for (int i = 0; i < maxSweeps; ++i) {
-        Task svdStep(Task::SvdStep, i);
-        dags[0].addEdge(setup, svdStep);
-        dags[0].addEdge(svdStep, finish);
-    }
-
-    dispatch_task(std::move(bamm));
-
     matrices.clear();
 }
 
+Single GlobalTaskDispatcher::getBamm(int id1, int id2) {
+    auto &ownMatrices = matrices[id1];
+    std::optional<MatrixRef> xcols, ycols;
+    xcols = matrices[id2].bx->leftCols(l);
+    ycols = matrices[id2].by->leftCols(l);
+    Single bamm(l, beta);
+    bamm.setMatrices(std::move(xcols.value()), std::move(ycols.value()),
+                     ownMatrices.bx, ownMatrices.by);
+    return bamm;
+}
 
 
 

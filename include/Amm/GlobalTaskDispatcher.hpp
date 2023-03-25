@@ -60,7 +60,9 @@ namespace GAMM {
         void reduce() override;
         //std::vector<std::mutex> mtxs;
         std::vector<DAG> dags;
-        void dispatch_task(GAMM::Single bamm);
+        std::vector<Single> bamms;
+        void dispatch_task(std::vector<Single> bamms);
+        Single getBamm(int id1, int id2);
     };
 
 
