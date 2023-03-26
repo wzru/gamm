@@ -58,10 +58,13 @@ namespace GAMM {
                   barrier{pool->get_thread_count() + 1} {}
 
         void reduce() override;
-        //std::vector<std::mutex> mtxs;
+        // current set of DAG to be dispatched
         std::vector<DAG> dags;
+        // current set of Bamm objects to work with, to which the abstract tasks reference
         std::vector<Single> bamms;
+        // start dispatch tasks from the first partition
         void dispatch_task(std::vector<Single> bamms);
+        // get a new instance of Bamm object, to which the abstract tasks reference
         Single getBamm(int id1, int id2);
     };
 

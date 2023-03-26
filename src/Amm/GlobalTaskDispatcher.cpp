@@ -43,37 +43,50 @@ std::deque<Task> DAG::topologicalSort() {
 
 //TODO improve efficiency
 void GlobalTaskDispatcher::dispatch_task(std::vector<Single> bamms) {
-    std::deque<Task> sortedTasks = this->dags[0].topologicalSort();
-    std::future<bool> future;
-    for (auto& bamm : bamms) {
-        //TODO algorithm that improves the utilization of threadpool
-        while (!sortedTasks.empty()) {
+    std::deque<Task> sortedTasks;
+    std::vector<std::deque<Task>> sortedList;
+    int idx = 0;
+    for (auto& bamm : bamms){
+        sortedList[idx] = this->dags[idx].topologicalSort();
+        ++idx;
+    }
+    std::vector<std::future<bool>> futures;
+    while (true) {
+        idx = 0;
+        for (auto &bamm: bamms) {
+            sortedTasks = sortedList[idx];
+            //TODO algorithm that improves the utilization of threadpool
             Task task = sortedTasks.front();
             sortedTasks.pop_front();
+
+            if (&futures[idx]) {
+                futures[idx].wait();
+                if (futures[idx].get() == false) {
+                    // TODO handle outcome
+                    /*while (!sortedTasks.empty() && sortedTasks.front().type == Task::SvdStep) {
+                        sortedTasks.pop_front();
+                    }*/
+                }
+            }
+
             switch (task.type) {
                 case Task::Setup:
-                    future = pool->submit([this, &bamm] {
+                    futures[idx] = pool->submit([this, &bamm] {
                         return bamm.Bamm::reductionStepSetup();
                     });
                     break;
                 case Task::SvdStep:
-                    future = pool->submit([this, &bamm, task] {
+                    futures[idx] = pool->submit([this, &bamm, task] {
                         return bamm.Bamm::reductionStepSvdStep(task.index);
                     });
                     break;
                 case Task::Finish:
-                    future = pool->submit([this, &bamm] {
+                    futures[idx] = pool->submit([this, &bamm] {
                         return bamm.Bamm::reductionStepFinish();
                     });
                     break;
             }
-            future.wait();
-            // delete the chain of the rest of svd steps
-            if (future.get() == false) {
-                while (!sortedTasks.empty() && sortedTasks.front().type == Task::SvdStep) {
-                    sortedTasks.pop_front();
-                }
-            }
+            ++idx;
         }
     }
 }
