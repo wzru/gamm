@@ -58,18 +58,30 @@ public:
     reduce();
   }
 
+  void setMatrices(MatrixRef x, MatrixRef y, MatrixPtr bx, MatrixPtr by) {
+    this->bx = std::move(bx);
+    this->by = std::move(by);
+    this->x = std::move(x);
+    this->y = std::move(y);
+
+    zeroedColumns.fromMatrix(*this->bx.value());
+    xi = 0;
+  }
+
   struct result {
     MatrixPtr bx, by;
   };
+
+    bool reductionStepSetup();
+
+    bool reductionStepFinish();
+
+    bool reductionStepSvdStep(size_t nsteps = 1);
 
 protected:
   virtual void reduce() = 0;
 
   void parameterizedReduceRank(DiagonalMatrix &sv) const;
-
-  bool reductionStepSetup();
-  bool reductionStepSvdStep(size_t nsteps = 1);
-  void reductionStepFinish();
 
   size_t l;
   scalar_t beta;
