@@ -1,7 +1,5 @@
 // Copyright (C) 2021 by the INTELLI team (https://github.com/intellistream)
 
-#define EIGEN_FAST_MATH 0
-
 #ifndef IntelliStream_SRC_UTILS_UTILITYFUNCTIONS_HPP_
 #define IntelliStream_SRC_UTILS_UTILITYFUNCTIONS_HPP_
 #include <Eigen/Dense>

@@ -43,3 +43,6 @@ benchmark.log
 /benchmark/benchmark
 
 /.cache
+
+build/
+.vscode/

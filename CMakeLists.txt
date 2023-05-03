@@ -24,7 +24,7 @@ message(STATUS "sudo apt install gcc-11 g++-11")
 
 
 # Set Optimization Flags
-set(CMAKE_CXX_FLAGS "-std=c++20 -Wall -Werror=return-type -Werror=unused-variable -Werror=unused-parameter -march=native -pthread")
+set(CMAKE_CXX_FLAGS "-std=c++20 -march=native -pthread")
 set(CMAKE_CXX_FLAGS_DEBUG "-g -O0 -DNO_RACE_CHECK -DGamm_DEBUG_MODE=1")
 set(CMAKE_CXX_FLAGS_RELEASE "-Wno-ignored-qualifiers -Wno-sign-compare -O3")
 
@@ -42,41 +42,15 @@ message(STATUS "CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS}")
 message(STATUS "CMAKE_CXX_FLAGS_DEBUG ${CMAKE_CXX_FLAGS_DEBUG}")
 message(STATUS "CMAKE_CXX_FLAGS_RELEASE ${CMAKE_CXX_FLAGS_RELEASE}")
 
-
-# Log4cc
-find_package(Log4cxx REQUIRED)
-include_directories(${Log4cxx_INCLUDE_DIR})
-set(LIBRARIES ${LIBRARIES} ${Log4cxx_LIBRARY})
-
-if (LOG4CXX_FOUND)
-    message(STATUS "LOG4CXX found")
-else (LOG4CXX_FOUND)
-    message(STATUS "LOG4CXX not found")
-    message(STATUS "On Ubuntu, install the package by the following command!")
-    message(STATUS "sudo apt-get install -y liblog4cxx-dev")
-endif (LOG4CXX_FOUND)
-
-# Boost
-find_package(Boost COMPONENTS program_options REQUIRED)
-include_directories( ${Boost_INCLUDE_DIR} )
-set(LIBRARIES ${LIBRARIES} ${Boost_LIBRARIES})
-
-if (BOOST_FOUND)
-    message(STATUS "BOOST found")
-else (BOOST_FOUND)
-    message(STATUS "BOOST not found")
-endif (BOOST_FOUND)
-
 # Eigen
 find_package(Eigen3 3.4 REQUIRED NO_MODULE)
-set(LIBRARIES ${LIBRARIES} Eigen3::Eigen)
+set(LIBRARIES ${LIBRARIES} Eigen3::Eigen boost_program_options log4cxx)
 
 if (TARGET Eigen3::Eigen)
     message(STATUS "Eigen3 found")
 else (TARGET Eigen3::Eigen)
     message(STATUS "Eigen3 not found")
 endif (TARGET Eigen3::Eigen)
-
 
 option(ENABLE_UNIT_TESTS "Enable unit tests" ON)
 message(STATUS "Enable testing: ${ENABLE_UNIT_TESTS}")

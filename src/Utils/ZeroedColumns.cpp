@@ -34,7 +34,7 @@ void ZeroedColumns::fromMatrix(const Matrix &matrix) {
 
 void ZeroedColumns::setZeroed(size_t index) {
   if (nextZeroed[index] != NON_ZERO) {
-    INTELLI_WARNING("Setting already zeroed column (" << index << ") to zero");
+    // INTELLI_WARNING("Setting already zeroed column (" << index << ") to zero");
     // Reduce zeroedCount so that increment later will restore it to the same
     // count
     zeroedCount--;
