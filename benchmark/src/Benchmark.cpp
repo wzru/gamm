@@ -29,7 +29,7 @@ void runFunction(std::string_view name, GAMM::BammUPtr bamm,
 
 int main(int argc, char **argv) {
   // Setup Logs.
-  setupLogging("benchmark.log", LOG_TRACE);
+  setupLogging("benchmark.log", LOG_INFO);
 
   const GAMM::Config config{argc, argv};
 
@@ -91,14 +91,14 @@ int main(int argc, char **argv) {
   }
 
   if (config.bins.combined) {
-    for (size_t p = 1; p <= config.t; ++p) {
-      std::string s{"combined-parallel-"};
-      s += std::to_string(p);
-      runFunction(s,
-                  std::make_unique<GAMM::CombinedParallel>(
-                      config.l, config.beta, config.t, p),
-                  x, y, z, energyMeter, config.energyCSVPath);
-    }
+    // for (size_t p = 1; p <= config.t; p *= 2) {
+    std::string s{"combined-parallel-"};
+    // s += std::to_string(p);
+    runFunction(s,
+                std::make_unique<GAMM::CombinedParallel>(config.l, config.beta,
+                                                         config.t, config.t),
+                x, y, z, energyMeter, config.energyCSVPath);
+    // }
   }
 }
 
@@ -131,8 +131,8 @@ void runFunction(std::string_view name, GAMM::BammUPtr bamm,
 
   auto err = GAMM::UtilityFunctions::spectralNorm(*z_amm);
 
-  std::cout << ' ' << std::setw(23) << name << ":  Time - " << std::setw(8)
-            << std::setprecision(4) << ((double)tmr.ms() / 1000.0) << "s;  ";
+  std::cout << "\033[0;32m" << std::setw(23) << name << ":  Time - "
+            << (tmr.ms()) << "ms;  \033[0m";
 
   if (energyReadings.has_value()) {
     if (energyCSVPath.has_value()) {
@@ -143,5 +143,5 @@ void runFunction(std::string_view name, GAMM::BammUPtr bamm,
               << (energyReadings.value().energyConsumed()) << "J;  ";
   }
 
-  std::cout << "Error - " << std::setprecision(4) << err << std::endl;
+  // std::cout << "Error - " << std::setprecision(4) << err << std::endl;
 }

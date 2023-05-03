@@ -36,15 +36,14 @@ class CombinedParallel : public Bamm {
   // before a previous level is finished for another worker. By giving p extra
   // threads, there are more than enough threads to execute on.
   size_t getT() const { return pool->get_thread_count() - p + 1; }
-  void workerTask(size_t workerId);
+  void workerTask(size_t workerId, BS::thread_pool_ptr pool);
 
   size_t getNumIntraThreads(size_t workerId, int i);
 
 public:
   // See getT() for the reason for t+p-1 threads being spawned
   CombinedParallel(size_t l, scalar_t beta, size_t t, size_t p)
-      : CombinedParallel(l, beta, std::make_shared<BS::thread_pool>(t + p - 1),
-                         p) {}
+      : CombinedParallel(l, beta, std::make_shared<BS::thread_pool>(t), p) {}
 
   CombinedParallel(size_t l, scalar_t beta, BS::thread_pool_ptr pool, size_t p)
       : Bamm(l, beta, std::make_unique<SequentialJTS>()), p{p}, pool{pool},

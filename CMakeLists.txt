@@ -6,7 +6,7 @@ project(Gamm CXX)
 # Judge the os system
 
 if (UNIX AND NOT APPLE)
-    add_definitions(-DUSELOG4CXX)
+    # add_definitions(-DUSELOG4CXX)
     MESSAGE(STATUS "Enable Log4CXX")
 endif (UNIX AND NOT APPLE)
 
@@ -22,9 +22,10 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 message(STATUS "sudo apt-get update")
 message(STATUS "sudo apt install gcc-11 g++-11")
 
+set(Boost_USE_STATIC_LIBS ON)
 
 # Set Optimization Flags
-set(CMAKE_CXX_FLAGS "-std=c++20 -Wall -Werror=return-type -Werror=unused-variable -Werror=unused-parameter -march=native -pthread")
+set(CMAKE_CXX_FLAGS "-std=c++20 -Wall -Werror=return-type -march=native -pthread")
 set(CMAKE_CXX_FLAGS_DEBUG "-g -O0 -DNO_RACE_CHECK -DGamm_DEBUG_MODE=1")
 set(CMAKE_CXX_FLAGS_RELEASE "-Wno-ignored-qualifiers -Wno-sign-compare -O3")
 
@@ -112,7 +113,7 @@ add_subdirectory(src)
 # Add Library
 get_sources(Gamm_SOURCE_FILES)
 get_headers(Gamm_HEADER_FILES)
-add_library(Gamm SHARED ${Gamm_SOURCE_FILES} ${Gamm_HEADER_FILES} ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_BINARY_DIR})
+add_library(Gamm STATIC ${Gamm_SOURCE_FILES} ${Gamm_HEADER_FILES} ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_BINARY_DIR})
 target_include_directories(Gamm PUBLIC "include")
 target_include_directories(Gamm PUBLIC "${CMAKE_CURRENT_BINARY_DIR}")
 target_link_libraries(Gamm PUBLIC ${LIBRARIES})

@@ -33,6 +33,8 @@
 
 /cmake-build-debug/*
 /cmake-build-release/*
+build/
+.vscode/
 
 !/cmake-build-debug/generate_cmake.sh
 !/cmake-build-release/generate_cmake.sh

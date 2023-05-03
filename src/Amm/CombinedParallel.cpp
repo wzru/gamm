@@ -29,17 +29,21 @@ void CombinedParallel::reduce() {
 
   BS::multi_future<void> tasks(p - 1);
 
+  auto subpool = std::make_shared<BS::thread_pool>(8);
+
   for (size_t i = 1; i < p; ++i) {
-    tasks[i - 1] = pool->submit([this, i]() { workerTask(i); });
+    tasks[i - 1] =
+        pool->submit([this, i, subpool]() { workerTask(i, subpool); });
   }
-  workerTask(0);
+  workerTask(0, subpool);
   tasks.wait();
 
   matrices.clear();
 }
 
-void CombinedParallel::workerTask(size_t workerId) {
-  auto d = x.value().cols();
+void CombinedParallel::workerTask(size_t workerId,
+                                  BS::thread_pool_ptr subpool) {
+  auto d = x.value().cols(); // 10000
   auto nruns = UtilityFunctions::trailingZeros(
                    workerId | UtilityFunctions::nextPowerOfTwo(p)) +
                1;
@@ -79,7 +83,7 @@ void CombinedParallel::workerTask(size_t workerId) {
 
     auto nthreads = getNumIntraThreads(workerId, (int)i);
 
-    IntraParallel bamm(l, beta, pool, nthreads);
+    IntraParallel bamm(l, beta, subpool, nthreads);
 
     bamm.Bamm::reduce(std::move(xcols.value()), std::move(ycols.value()),
                       ownMatrices.bx, ownMatrices.by);

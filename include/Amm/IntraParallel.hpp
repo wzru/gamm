@@ -21,7 +21,7 @@ public:
   IntraParallel(size_t l, scalar_t beta, size_t t)
       : Bamm(l, beta, std::make_unique<ParallelJTS>(t)) {}
   IntraParallel(size_t l, scalar_t beta, BS::thread_pool_ptr pool, size_t t)
-      : Bamm(l, beta, std::make_unique<ParallelJTS>(pool, t)) {}
+      : Bamm(l, beta, std::make_unique<ParallelJTS>(t), pool) {}
   void reduce() override;
 };
 } // namespace GAMM

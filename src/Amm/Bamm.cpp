@@ -54,26 +54,35 @@ bool Bamm::reductionStepSetup() {
 bool Bamm::reductionStepSvdStep(size_t nsteps) { return svd->svdStep(nsteps); }
 
 bool Bamm::reductionStepFinish() {
-  svd->finishSvd();
+  auto svd_future = pool->submit([&]() { svd->finishSvd(); });
+  // svd->finishSvd();
+
+  svd_future.get();
 
   auto &sv = svd->singularValues();
   auto &u = svd->matrixU();
   auto &v = svd->matrixV();
 
-  parameterizedReduceRank(sv);
+  auto prr_future = pool->submit([&]() { parameterizedReduceRank(sv); });
+  // parameterizedReduceRank(sv);
+  prr_future.get();
 
-  for (int i = 0; i < sv.cols(); ++i) {
-    const auto &value = sv.diagonal()[i];
+  auto end_future = pool->submit([&]() {
+    for (int i = 0; i < sv.cols(); ++i) {
+      const auto &value = sv.diagonal()[i];
 
-    if (UtilityFunctions::isZero(value)) {
-      zeroedColumns.setZeroed(i);
+      if (UtilityFunctions::isZero(value)) {
+        zeroedColumns.setZeroed(i);
+      }
+
+      u.col(i) *= value;
+      v.col(i) *= value;
     }
+    *bx.value() *= u;
+    *by.value() *= v;
+  });
 
-    u.col(i) *= value;
-    v.col(i) *= value;
-  }
+  end_future.get();
 
-  *bx.value() *= u;
-  *by.value() *= v;
   return true;
 }

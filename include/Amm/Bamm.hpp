@@ -9,6 +9,7 @@
 
 #include <Eigen/Dense>
 
+#include "BS_thread_pool.hpp"
 #include "Svd/Svd.hpp"
 #include "Utils/Logger.hpp"
 #include "Utils/ZeroedColumns.hpp"
@@ -21,6 +22,15 @@ public:
 
   Bamm(size_t l, scalar_t beta, SvdUPtr svd)
       : l{l}, beta{beta}, svd{std::move(svd)} {
+    attenuateVec.resize(l);
+    for (size_t i = 0; i < l; ++i) {
+      attenuateVec[i] = std::expm1((scalar_t)i * beta / ((scalar_t)l - 1.0)) /
+                        std::expm1(beta);
+    }
+  }
+
+  Bamm(size_t l, scalar_t beta, SvdUPtr svd, BS::thread_pool_ptr pool)
+      : l{l}, beta{beta}, svd{std::move(svd)}, pool(pool) {
     attenuateVec.resize(l);
     for (size_t i = 0; i < l; ++i) {
       attenuateVec[i] = std::expm1((scalar_t)i * beta / ((scalar_t)l - 1.0)) /
@@ -72,11 +82,11 @@ public:
     MatrixPtr bx, by;
   };
 
-    bool reductionStepSetup();
+  bool reductionStepSetup();
 
-    bool reductionStepFinish();
+  bool reductionStepFinish();
 
-    bool reductionStepSvdStep(size_t nsteps = 1);
+  bool reductionStepSvdStep(size_t nsteps = 1);
 
 protected:
   virtual void reduce() = 0;
@@ -90,6 +100,7 @@ protected:
   std::optional<MatrixPtr> bx, by;
   SvdUPtr svd;
   ZeroedColumns zeroedColumns;
+  BS::thread_pool_ptr pool;
 
 private:
   Vector attenuateVec;
